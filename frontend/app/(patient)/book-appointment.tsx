@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,12 +29,39 @@ export default function BookAppointmentScreen() {
   const [appointmentType, setAppointmentType] = useState<'video' | 'in_person'>('video');
   const [symptoms, setSymptoms] = useState('');
   const [loading, setLoading] = useState(false);
+  const [appointmentId, setAppointmentId] = useState('');
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [appointmentDetails, setAppointmentDetails] = useState<any>(null);
 
-  const timeSlots = [
+  const allTimeSlots = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
     '12:00', '12:30', '14:00', '14:30', '15:00', '15:30',
     '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
   ];
+
+  const getAvailableTimeSlots = () => {
+    if (!selectedDate) return allTimeSlots;
+    
+    const today = new Date();
+    const selected = new Date(selectedDate);
+    
+    // If selected date is not today, return all slots
+    if (selected.toDateString() !== today.toDateString()) {
+      return allTimeSlots;
+    }
+    
+    // Filter out past time slots for today
+    const currentHour = today.getHours();
+    const currentMinute = today.getMinutes();
+    
+    return allTimeSlots.filter(slot => {
+      const [hour, minute] = slot.split(':').map(Number);
+      if (hour > currentHour) return true;
+      if (hour === currentHour && minute > currentMinute) return true;
+      return false;
+    });
+  };
 
   useEffect(() => {
     loadSpecializations();
@@ -71,15 +99,7 @@ export default function BookAppointmentScreen() {
     setStep(3);
   };
 
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date);
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
-  };
-
-  const handleBookAppointment = async () => {
+  const handleProceedToPayment = async () => {
     if (!selectedDate || !selectedTime) {
       Alert.alert('Error', 'Please select date and time');
       return;
@@ -87,7 +107,8 @@ export default function BookAppointmentScreen() {
 
     setLoading(true);
     try {
-      const response = await api.post('/api/appointments/book', {
+      // Step 1: Book the appointment
+      const bookingResponse = await api.post('/api/appointments/book', {
         doctor_id: selectedDoctor.id,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
@@ -95,33 +116,210 @@ export default function BookAppointmentScreen() {
         symptoms,
       });
 
-      Alert.alert('Success', 'Appointment booked successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/(patient)/appointments'),
-        },
-      ]);
+      const appointmentId = bookingResponse.data.id;
+      setAppointmentId(appointmentId);
+
+      // Step 2: Create payment order
+      const paymentOrderResponse = await api.post('/api/payments/create-order', {
+        appointment_id: appointmentId,
+        amount: selectedDoctor.consultation_fee,
+      });
+
+      const { order_id, amount, razorpay_key_id } = paymentOrderResponse.data;
+
+      // Step 3: Process Razorpay payment
+      await processRazorpayPayment({
+        order_id,
+        amount,
+        key_id: razorpay_key_id,
+        appointment_id: appointmentId,
+      });
+
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to book appointment');
-    } finally {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to process booking');
       setLoading(false);
     }
   };
 
+  const processRazorpayPayment = async (paymentData: any) => {
+    try {
+      // For demo purposes, we'll simulate payment success
+      // In production, you would integrate actual Razorpay SDK
+      
+      Alert.alert(
+        'Payment',
+        'Proceed with payment of ₹' + (paymentData.amount / 100) + '?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setLoading(false),
+          },
+          {
+            text: 'Pay Now',
+            onPress: async () => {
+              try {
+                // Simulate payment success
+                const mockPaymentId = 'pay_mock_' + Date.now();
+                const mockSignature = 'sig_mock_' + Date.now();
+
+                // Verify payment
+                const verifyResponse = await api.post('/api/payments/verify', {
+                  appointment_id: paymentData.appointment_id,
+                  razorpay_order_id: paymentData.order_id,
+                  razorpay_payment_id: mockPaymentId,
+                  razorpay_signature: mockSignature,
+                });
+
+                // Get appointment details
+                const appointmentResponse = await api.get(`/api/appointments/${paymentData.appointment_id}`);
+                setAppointmentDetails(appointmentResponse.data);
+                
+                setLoading(false);
+                setShowConfirmation(true);
+              } catch (error: any) {
+                setLoading(false);
+                Alert.alert('Error', 'Payment verification failed. Please contact support.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'Payment processing failed');
+    }
+  };
+
+  const handleJoinVideoCall = () => {
+    if (appointmentDetails?.zoom_join_url) {
+      Linking.openURL(appointmentDetails.zoom_join_url);
+    } else {
+      Alert.alert('Info', 'Video call link will be available closer to appointment time');
+    }
+  };
+
+  if (showConfirmation && appointmentDetails) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <LinearGradient
+          colors={['#10b981', '#059669']}
+          style={styles.confirmationContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.confirmationContent}>
+            <View style={styles.successIcon}>
+              <Ionicons name="checkmark-circle" size={80} color="#fff" />
+            </View>
+            <Text style={styles.confirmationTitle}>Booking Confirmed!</Text>
+            <Text style={styles.confirmationSubtitle}>
+              Your appointment has been successfully booked
+            </Text>
+
+            <View style={styles.confirmationCard}>
+              <View style={styles.confirmationRow}>
+                <Ionicons name="person" size={20} color="#2563eb" />
+                <Text style={styles.confirmationLabel}>Doctor</Text>
+              </View>
+              <Text style={styles.confirmationValue}>
+                Dr. {appointmentDetails.doctor_details?.first_name} {appointmentDetails.doctor_details?.last_name}
+              </Text>
+
+              <View style={styles.confirmationRow}>
+                <Ionicons name="calendar" size={20} color="#2563eb" />
+                <Text style={styles.confirmationLabel}>Date & Time</Text>
+              </View>
+              <Text style={styles.confirmationValue}>
+                {new Date(appointmentDetails.appointment_datetime).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+              <Text style={styles.confirmationValue}>
+                {new Date(appointmentDetails.appointment_datetime).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+
+              <View style={styles.confirmationRow}>
+                <Ionicons name="videocam" size={20} color="#2563eb" />
+                <Text style={styles.confirmationLabel}>Type</Text>
+              </View>
+              <Text style={styles.confirmationValue}>{appointmentDetails.appointment_type}</Text>
+
+              {appointmentDetails.zoom_join_url && (
+                <>
+                  <View style={styles.confirmationRow}>
+                    <Ionicons name="link" size={20} color="#2563eb" />
+                    <Text style={styles.confirmationLabel}>Video Call Link</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.zoomButton}
+                    onPress={handleJoinVideoCall}
+                  >
+                    <LinearGradient
+                      colors={['#2563eb', '#1e40af']}
+                      style={styles.zoomButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Ionicons name="videocam" size={20} color="#fff" />
+                      <Text style={styles.zoomButtonText}>Join Video Call</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => router.replace('/(patient)/appointments')}
+            >
+              <Text style={styles.doneButtonText}>View My Appointments</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.homeButton}
+              onPress={() => router.replace('/(patient)/home')}
+            >
+              <Text style={styles.homeButtonText}>Back to Home</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#1e3a8a', '#2563eb']}
+        colors={['#1e3a8a', '#2563eb', '#3b82f6']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : router.back()} style={styles.backButton}>
+          <TouchableOpacity 
+            onPress={() => step > 1 ? setStep(step - 1) : router.back()} 
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Book Appointment</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Book Appointment</Text>
+            <Text style={styles.headerSubtitle}>
+              {step === 1 && 'Select Specialization'}
+              {step === 2 && 'Choose Doctor'}
+              {step === 3 && 'Date & Time'}
+            </Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="calendar" size={24} color="#fff" />
+          </View>
         </View>
 
         <View style={styles.progressContainer}>
@@ -129,9 +327,11 @@ export default function BookAppointmentScreen() {
             <View key={s} style={styles.progressItem}>
               <View style={[styles.progressDot, step >= s && styles.progressDotActive]}>
                 {step > s ? (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={16} color="#2563eb" />
                 ) : (
-                  <Text style={styles.progressNumber}>{s}</Text>
+                  <Text style={[styles.progressNumber, step >= s && styles.progressNumberActive]}>
+                    {s}
+                  </Text>
                 )}
               </View>
               {s < 3 && <View style={[styles.progressLine, step > s && styles.progressLineActive]} />}
@@ -246,7 +446,10 @@ export default function BookAppointmentScreen() {
             
             <View style={styles.calendarContainer}>
               <Calendar
-                onDayPress={(day) => handleDateSelect(day.dateString)}
+                onDayPress={(day) => {
+                  setSelectedDate(day.dateString);
+                  setSelectedTime(''); // Reset time when date changes
+                }}
                 markedDates={{
                   [selectedDate]: {
                     selected: true,
@@ -269,16 +472,21 @@ export default function BookAppointmentScreen() {
 
             {selectedDate && (
               <>
-                <Text style={styles.timeSlotsTitle}>Available Time Slots</Text>
+                <Text style={styles.timeSlotsTitle}>
+                  Available Time Slots
+                  {selectedDate === new Date().toISOString().split('T')[0] && (
+                    <Text style={styles.timeSlotsNote}> (Today)</Text>
+                  )}
+                </Text>
                 <View style={styles.timeSlotsGrid}>
-                  {timeSlots.map((time) => (
+                  {getAvailableTimeSlots().map((time) => (
                     <TouchableOpacity
                       key={time}
                       style={[
                         styles.timeSlot,
                         selectedTime === time && styles.timeSlotActive,
                       ]}
-                      onPress={() => handleTimeSelect(time)}
+                      onPress={() => setSelectedTime(time)}
                     >
                       <Text
                         style={[
@@ -292,93 +500,101 @@ export default function BookAppointmentScreen() {
                   ))}
                 </View>
 
-                <Text style={styles.sectionLabel}>Appointment Type</Text>
-                <View style={styles.typeContainer}>
-                  <TouchableOpacity
-                    style={[styles.typeButton, appointmentType === 'video' && styles.typeButtonActive]}
-                    onPress={() => setAppointmentType('video')}
-                  >
-                    <Ionicons
-                      name="videocam"
-                      size={20}
-                      color={appointmentType === 'video' ? '#fff' : '#2563eb'}
+                {getAvailableTimeSlots().length === 0 && (
+                  <View style={styles.noSlotsContainer}>
+                    <Ionicons name="time-outline" size={48} color="#9ca3af" />
+                    <Text style={styles.noSlotsText}>No more slots available today</Text>
+                    <Text style={styles.noSlotsSubtext}>Please select another date</Text>
+                  </View>
+                )}
+
+                {selectedTime && (
+                  <>
+                    <Text style={styles.sectionLabel}>Appointment Type</Text>
+                    <View style={styles.typeContainer}>
+                      <TouchableOpacity
+                        style={[styles.typeButton, appointmentType === 'video' && styles.typeButtonActive]}
+                        onPress={() => setAppointmentType('video')}
+                      >
+                        <Ionicons
+                          name="videocam"
+                          size={20}
+                          color={appointmentType === 'video' ? '#fff' : '#2563eb'}
+                        />
+                        <Text style={[styles.typeText, appointmentType === 'video' && styles.typeTextActive]}>
+                          Video Call
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.typeButton, appointmentType === 'in_person' && styles.typeButtonActive]}
+                        onPress={() => setAppointmentType('in_person')}
+                      >
+                        <Ionicons
+                          name="location"
+                          size={20}
+                          color={appointmentType === 'in_person' ? '#fff' : '#2563eb'}
+                        />
+                        <Text style={[styles.typeText, appointmentType === 'in_person' && styles.typeTextActive]}>
+                          In-Person
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.sectionLabel}>Symptoms (Optional)</Text>
+                    <TextInput
+                      style={styles.textArea}
+                      placeholder="Describe your symptoms..."
+                      value={symptoms}
+                      onChangeText={setSymptoms}
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                      placeholderTextColor="#94a3b8"
                     />
-                    <Text style={[styles.typeText, appointmentType === 'video' && styles.typeTextActive]}>
-                      Video Call
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.typeButton, appointmentType === 'in_person' && styles.typeButtonActive]}
-                    onPress={() => setAppointmentType('in_person')}
-                  >
-                    <Ionicons
-                      name="location"
-                      size={20}
-                      color={appointmentType === 'in_person' ? '#fff' : '#2563eb'}
-                    />
-                    <Text style={[styles.typeText, appointmentType === 'in_person' && styles.typeTextActive]}>
-                      In-Person
-                    </Text>
-                  </TouchableOpacity>
-                </View>
 
-                <Text style={styles.sectionLabel}>Symptoms (Optional)</Text>
-                <TextInput
-                  style={styles.textArea}
-                  placeholder="Describe your symptoms..."
-                  value={symptoms}
-                  onChangeText={setSymptoms}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  placeholderTextColor="#94a3b8"
-                />
+                    <View style={styles.summaryCard}>
+                      <Text style={styles.summaryTitle}>Payment Summary</Text>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Consultation Fee</Text>
+                        <Text style={styles.summaryValue}>₹{selectedDoctor.consultation_fee}</Text>
+                      </View>
+                      <View style={styles.summaryDivider} />
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryTotal}>Total Amount</Text>
+                        <Text style={[styles.summaryValue, styles.summaryTotalValue]}>
+                          ₹{selectedDoctor.consultation_fee}
+                        </Text>
+                      </View>
+                    </View>
 
-                <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>Appointment Summary</Text>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Date</Text>
-                    <Text style={styles.summaryValue}>
-                      {new Date(selectedDate).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Time</Text>
-                    <Text style={styles.summaryValue}>{selectedTime}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Consultation Fee</Text>
-                    <Text style={[styles.summaryValue, styles.summaryFee]}>
-                      ₹{selectedDoctor.consultation_fee}
-                    </Text>
-                  </View>
-                </View>
+                    <TouchableOpacity
+                      style={[styles.paymentButton, loading && styles.paymentButtonDisabled]}
+                      onPress={handleProceedToPayment}
+                      disabled={loading}
+                    >
+                      <LinearGradient
+                        colors={['#059669', '#047857']}
+                        style={styles.paymentButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <>
+                            <Ionicons name="card" size={24} color="#fff" />
+                            <Text style={styles.paymentButtonText}>Proceed to Payment</Text>
+                          </>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.bookButton, loading && styles.bookButtonDisabled]}
-                  onPress={handleBookAppointment}
-                  disabled={loading}
-                >
-                  <LinearGradient
-                    colors={['#2563eb', '#1e40af']}
-                    style={styles.bookButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                        <Text style={styles.bookButtonText}>Confirm Booking</Text>
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+                    <View style={styles.securePayment}>
+                      <Ionicons name="shield-checkmark" size={16} color="#059669" />
+                      <Text style={styles.securePaymentText}>Secure payment via Razorpay</Text>
+                    </View>
+                  </>
+                )}
               </>
             )}
           </View>
@@ -392,14 +608,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   headerGradient: { paddingBottom: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 10 },
-  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  progressContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255, 255, 255, 0.25)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
+  headerTextContainer: { flex: 1, marginLeft: 16 },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', letterSpacing: 0.5 },
+  headerSubtitle: { fontSize: 13, color: '#dbeafe', marginTop: 2, letterSpacing: 0.3 },
+  headerIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255, 255, 255, 0.25)', justifyContent: 'center', alignItems: 'center' },
+  progressContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, marginTop: 12 },
   progressItem: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  progressDot: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255, 255, 255, 0.3)', justifyContent: 'center', alignItems: 'center' },
-  progressDotActive: { backgroundColor: '#fff' },
-  progressNumber: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  progressLine: { flex: 1, height: 2, backgroundColor: 'rgba(255, 255, 255, 0.3)', marginHorizontal: 4 },
+  progressDot: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.3)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
+  progressDotActive: { backgroundColor: '#fff', borderColor: '#fff' },
+  progressNumber: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  progressNumberActive: { color: '#2563eb' },
+  progressLine: { flex: 1, height: 3, backgroundColor: 'rgba(255, 255, 255, 0.3)', marginHorizontal: 4 },
   progressLineActive: { backgroundColor: '#fff' },
   scrollView: { flex: 1 },
   content: { padding: 20 },
@@ -425,11 +645,15 @@ const styles = StyleSheet.create({
   selectedDoctorSpec: { fontSize: 14, color: '#dbeafe' },
   calendarContainer: { backgroundColor: '#fff', borderRadius: 20, padding: 12, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   timeSlotsTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 16 },
+  timeSlotsNote: { fontSize: 14, color: '#f59e0b', fontWeight: '600' },
   timeSlotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
   timeSlot: { width: '22%', backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 2, borderColor: '#e2e8f0' },
   timeSlotActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
   timeSlotText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
   timeSlotTextActive: { color: '#fff' },
+  noSlotsContainer: { alignItems: 'center', paddingVertical: 32, backgroundColor: '#f8fafc', borderRadius: 16, marginBottom: 24 },
+  noSlotsText: { fontSize: 16, fontWeight: '600', color: '#64748b', marginTop: 12 },
+  noSlotsSubtext: { fontSize: 14, color: '#94a3b8', marginTop: 4 },
   sectionLabel: { fontSize: 16, fontWeight: '600', color: '#1e293b', marginBottom: 12, marginTop: 8 },
   typeContainer: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   typeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', borderRadius: 16, padding: 16, gap: 8, borderWidth: 2, borderColor: 'transparent' },
@@ -437,14 +661,34 @@ const styles = StyleSheet.create({
   typeText: { fontSize: 15, fontWeight: '600', color: '#2563eb' },
   typeTextActive: { color: '#fff' },
   textArea: { backgroundColor: '#f8fafc', borderRadius: 16, padding: 16, fontSize: 16, color: '#1e293b', minHeight: 100, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 24 },
-  summaryCard: { backgroundColor: '#f0fdf4', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#bbf7d0' },
-  summaryTitle: { fontSize: 16, fontWeight: '700', color: '#166534', marginBottom: 16 },
+  summaryCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  summaryTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 16 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  summaryLabel: { fontSize: 14, color: '#166534' },
-  summaryValue: { fontSize: 14, fontWeight: '600', color: '#166534' },
-  summaryFee: { fontSize: 18, color: '#059669' },
-  bookButton: { borderRadius: 16, overflow: 'hidden', shadowColor: '#2563eb', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6 },
-  bookButtonDisabled: { opacity: 0.6 },
-  bookButtonGradient: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 18, gap: 8 },
-  bookButtonText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
+  summaryLabel: { fontSize: 15, color: '#64748b' },
+  summaryValue: { fontSize: 15, fontWeight: '600', color: '#1e293b' },
+  summaryDivider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 12 },
+  summaryTotal: { fontSize: 17, fontWeight: '700', color: '#1e293b' },
+  summaryTotalValue: { fontSize: 22, color: '#059669' },
+  paymentButton: { borderRadius: 16, overflow: 'hidden', shadowColor: '#059669', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8, marginBottom: 12 },
+  paymentButtonDisabled: { opacity: 0.6 },
+  paymentButtonGradient: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 18, gap: 10 },
+  paymentButtonText: { color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
+  securePayment: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
+  securePaymentText: { fontSize: 13, color: '#059669', fontWeight: '500' },
+  confirmationContainer: { flex: 1 },
+  confirmationContent: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' },
+  successIcon: { marginBottom: 24 },
+  confirmationTitle: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 8, textAlign: 'center' },
+  confirmationSubtitle: { fontSize: 16, color: '#d1fae5', marginBottom: 32, textAlign: 'center' },
+  confirmationCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', marginBottom: 24 },
+  confirmationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 8 },
+  confirmationLabel: { fontSize: 14, fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 },
+  confirmationValue: { fontSize: 16, color: '#1e293b', marginBottom: 4, fontWeight: '500' },
+  zoomButton: { marginTop: 12, borderRadius: 12, overflow: 'hidden' },
+  zoomButtonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, gap: 8 },
+  zoomButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  doneButton: { backgroundColor: '#fff', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 32, marginBottom: 12, width: '100%' },
+  doneButtonText: { color: '#059669', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  homeButton: { paddingVertical: 16 },
+  homeButtonText: { color: '#fff', fontSize: 15, fontWeight: '600', textAlign: 'center' },
 });

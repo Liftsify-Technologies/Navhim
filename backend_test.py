@@ -305,7 +305,7 @@ class NAVHIMAPITester:
             "doctor_id": doctor_data["id"],
             "appointment_date": future_date,
             "appointment_time": appointment_time,
-            "appointment_type": "in-person",
+            "appointment_type": "in_person",
             "symptoms": "Follow-up consultation",
             "notes": "Test in-person appointment for API testing"
         }

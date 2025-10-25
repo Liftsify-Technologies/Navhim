@@ -465,6 +465,42 @@ async def get_appointment(appointment_id: str, current_user: dict = Depends(get_
         logger.error(f"Error fetching appointment: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch appointment")
 
+@api_router.put("/appointments/{appointment_id}/complete-payment")
+async def complete_payment_mock(appointment_id: str, payment_data: dict, current_user: dict = Depends(get_current_user)):
+    """Complete payment without actual Razorpay - for demo purposes"""
+    try:
+        appointment = await db.appointments.find_one({"_id": ObjectId(appointment_id)})
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+        
+        if appointment["patient_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        update_data = {
+            "payment_id": payment_data.get("payment_id", f"mock_pay_{int(datetime.utcnow().timestamp())}"),
+            "payment_status": "completed"
+        }
+        
+        # Create mock Zoom meeting for video appointments
+        if appointment["appointment_type"] == "video":
+            mock_meeting_id = f"mock_{int(datetime.utcnow().timestamp())}"
+            update_data["zoom_meeting_id"] = mock_meeting_id
+            update_data["zoom_join_url"] = f"https://zoom.us/j/{mock_meeting_id}"
+            update_data["zoom_password"] = "demo123"
+        
+        await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {"$set": update_data}
+        )
+        
+        return {"success": True, "message": "Payment completed successfully", "zoom_join_url": update_data.get("zoom_join_url")}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error completing payment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to complete payment")
+
+
 @api_router.post("/payments/create-order", response_model=PaymentOrderResponse)
 async def create_payment_order(payment_data: PaymentOrderCreate, current_user: dict = Depends(get_current_user)):
     try:

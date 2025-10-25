@@ -56,6 +56,30 @@ export default function PatientLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="appointment-details"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="payment-confirm"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="confirmation"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

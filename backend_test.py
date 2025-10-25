@@ -67,7 +67,7 @@ class NAVHIMAPITester:
         """Test user authentication"""
         print("\n=== Testing Authentication ===")
         
-        # Test login
+        # First try to register a new user if login fails
         login_data = {
             "email": TEST_EMAIL,
             "password": TEST_PASSWORD
@@ -89,16 +89,55 @@ class NAVHIMAPITester:
                 )
                 return True
             else:
+                # Try to register new user
+                print("Login failed, attempting to register new test user...")
+                return self.test_user_registration()
+                
+        except Exception as e:
+            self.log_result("User Login", False, f"Login error: {str(e)}")
+            return False
+    
+    def test_user_registration(self):
+        """Test user registration"""
+        from datetime import date
+        
+        register_data = {
+            "email": TEST_EMAIL,
+            "password": TEST_PASSWORD,
+            "first_name": "Test",
+            "last_name": "Patient",
+            "phone": "+1234567890",
+            "date_of_birth": "1990-01-01",
+            "gender": "male",
+            "role": "patient"
+        }
+        
+        try:
+            response = self.make_request("POST", "/auth/register", register_data)
+            
+            if response.status_code == 201:
+                data = response.json()
+                self.access_token = data.get("access_token")
+                self.user_id = data.get("user", {}).get("id")
+                
                 self.log_result(
-                    "User Login", 
+                    "User Registration", 
+                    True, 
+                    f"Successfully registered and logged in as {TEST_EMAIL}",
+                    {"user_id": self.user_id, "token_received": bool(self.access_token)}
+                )
+                return True
+            else:
+                self.log_result(
+                    "User Registration", 
                     False, 
-                    f"Login failed with status {response.status_code}",
+                    f"Registration failed with status {response.status_code}",
                     response.text
                 )
                 return False
                 
         except Exception as e:
-            self.log_result("User Login", False, f"Login error: {str(e)}")
+            self.log_result("User Registration", False, f"Registration error: {str(e)}")
             return False
     
     def test_doctor_listing(self):

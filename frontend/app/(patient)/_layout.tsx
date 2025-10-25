@@ -50,6 +50,12 @@ export default function PatientLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="book-appointment"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

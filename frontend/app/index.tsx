@@ -1,31 +1,28 @@
 import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 
 export default function Index() {
-  const router = useRouter();
   const { isAuthenticated, user, loading } = useAuthStore();
 
-  useEffect(() => {
-    if (!loading) {
-      if (isAuthenticated && user) {
-        if (user.role === 'patient') {
-          router.replace('/(patient)/home');
-        } else if (user.role === 'doctor') {
-          router.replace('/(doctor)/home');
-        }
-      } else {
-        router.replace('/(auth)/login');
-      }
-    }
-  }, [isAuthenticated, user, loading]);
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
 
-  return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#2563eb" />
-    </View>
-  );
+  if (isAuthenticated && user) {
+    if (user.role === 'patient') {
+      return <Redirect href="/(patient)/home" />;
+    } else if (user.role === 'doctor') {
+      return <Redirect href="/(doctor)/home" />;
+    }
+  }
+
+  return <Redirect href="/(auth)/login" />;
 }
 
 const styles = StyleSheet.create({

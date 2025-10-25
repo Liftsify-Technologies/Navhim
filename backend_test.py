@@ -574,11 +574,14 @@ class NAVHIMAPITester:
         # Test doctor listing
         doctor_data = self.test_doctor_listing()
         
-        # Test appointment booking
+        # Test appointment booking (video)
         appointment_data = self.test_appointment_booking(doctor_data)
         
         # Test payment flow
         payment_success = self.test_payment_flow(appointment_data)
+        
+        # Test in-person appointment booking
+        inperson_appointment_data = self.test_inperson_appointment_booking(doctor_data)
         
         # Test appointment retrieval
         retrieval_success = self.test_appointment_retrieval()

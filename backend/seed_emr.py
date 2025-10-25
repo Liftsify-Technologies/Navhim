@@ -61,6 +61,28 @@ async def seed_emr_data():
         {
             "patient_id": patient_id,
             "recorded_by": doctor_user["_id"],
+            "blood_pressure_systolic": 125,
+            "blood_pressure_diastolic": 83,
+            "heart_rate": 78,
+            "temperature": 98.8,
+            "weight": 71.2,
+            "height": 175,
+            "recorded_at": datetime.utcnow() - timedelta(days=90)
+        },
+        {
+            "patient_id": patient_id,
+            "recorded_by": doctor_user["_id"],
+            "blood_pressure_systolic": 122,
+            "blood_pressure_diastolic": 81,
+            "heart_rate": 74,
+            "temperature": 98.6,
+            "weight": 70.8,
+            "height": 175,
+            "recorded_at": datetime.utcnow() - timedelta(days=60)
+        },
+        {
+            "patient_id": patient_id,
+            "recorded_by": doctor_user["_id"],
             "blood_pressure_systolic": 120,
             "blood_pressure_diastolic": 80,
             "heart_rate": 72,
@@ -83,13 +105,24 @@ async def seed_emr_data():
         {
             "patient_id": patient_id,
             "recorded_by": doctor_user["_id"],
-            "blood_pressure_systolic": 122,
-            "blood_pressure_diastolic": 82,
-            "heart_rate": 75,
-            "temperature": 98.7,
-            "weight": 70.2,
+            "blood_pressure_systolic": 116,
+            "blood_pressure_diastolic": 76,
+            "heart_rate": 70,
+            "temperature": 98.5,
+            "weight": 69.5,
             "height": 175,
-            "recorded_at": datetime.utcnow() - timedelta(days=5)
+            "recorded_at": datetime.utcnow() - timedelta(days=7)
+        },
+        {
+            "patient_id": patient_id,
+            "recorded_by": doctor_user["_id"],
+            "blood_pressure_systolic": 119,
+            "blood_pressure_diastolic": 79,
+            "heart_rate": 71,
+            "temperature": 98.6,
+            "weight": 69.9,
+            "height": 175,
+            "recorded_at": datetime.utcnow() - timedelta(days=2)
         },
     ]
     

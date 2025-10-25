@@ -84,6 +84,30 @@ export default function PatientEMRScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {activeTab === 'vitals' && (
           <>
+            {vitals.length > 0 && (
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Health Overview</Text>
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="pulse" size={20} color="#ef4444" />
+                    <Text style={styles.summaryLabel}>Last BP</Text>
+                    <Text style={styles.summaryValue}>
+                      {vitals[0].blood_pressure_systolic}/{vitals[0].blood_pressure_diastolic}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="heart" size={20} color="#ef4444" />
+                    <Text style={styles.summaryLabel}>Last HR</Text>
+                    <Text style={styles.summaryValue}>{vitals[0].heart_rate} bpm</Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="fitness" size={20} color="#10b981" />
+                    <Text style={styles.summaryLabel}>Weight</Text>
+                    <Text style={styles.summaryValue}>{vitals[0].weight} kg</Text>
+                  </View>
+                </View>
+              </View>
+            )}
             {vitals.length > 0 ? (
               vitals.map((vital, index) => (
                 <View key={index} style={styles.card}>

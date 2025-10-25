@@ -268,4 +268,6 @@ const styles = StyleSheet.create({
   emptyButton: { borderRadius: 16, overflow: 'hidden', shadowColor: '#2563eb', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   emptyButtonGradient: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, gap: 8 },
   emptyButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  viewDetailsContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#e2e8f0', gap: 6 },
+  viewDetailsText: { fontSize: 14, color: '#2563eb', fontWeight: '600' },
 });

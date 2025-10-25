@@ -289,6 +289,60 @@ class NAVHIMAPITester:
         
         return None
     
+    def test_inperson_appointment_booking(self, doctor_data: Dict):
+        """Test in-person appointment booking"""
+        print("\n=== Testing In-Person Appointment Booking ===")
+        
+        if not doctor_data:
+            self.log_result("In-Person Appointment Booking", False, "No doctor data available for booking")
+            return None
+        
+        # Create in-person appointment data
+        future_date = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
+        appointment_time = "10:00"
+        
+        appointment_data = {
+            "doctor_id": doctor_data["id"],
+            "appointment_date": future_date,
+            "appointment_time": appointment_time,
+            "appointment_type": "in-person",
+            "symptoms": "Follow-up consultation",
+            "notes": "Test in-person appointment for API testing"
+        }
+        
+        try:
+            response = self.make_request("POST", "/appointments/book", appointment_data)
+            
+            if response.status_code == 201:
+                data = response.json()
+                appointment_id = data.get("id")
+                
+                self.log_result(
+                    "Book In-Person Appointment",
+                    True,
+                    f"Successfully booked in-person appointment {appointment_id}",
+                    {
+                        "appointment_id": appointment_id,
+                        "doctor": f"Dr. {doctor_data.get('first_name', '')} {doctor_data.get('last_name', '')}",
+                        "date": future_date,
+                        "type": "in-person",
+                        "fee": data.get("consultation_fee")
+                    }
+                )
+                return data
+            else:
+                self.log_result(
+                    "Book In-Person Appointment",
+                    False,
+                    f"Booking failed with status {response.status_code}",
+                    response.text
+                )
+                return None
+                
+        except Exception as e:
+            self.log_result("Book In-Person Appointment", False, f"Error: {str(e)}")
+            return None
+    
     def test_appointment_booking(self, doctor_data: Dict):
         """Test appointment booking"""
         print("\n=== Testing Appointment Booking ===")

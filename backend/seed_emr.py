@@ -135,23 +135,51 @@ async def seed_emr_data():
             "patient_id": patient_id,
             "doctor_id": doctor_id,
             "appointment_id": None,
-            "diagnosis": "Seasonal Allergies",
+            "diagnosis": "Acute Respiratory Infection",
             "medications": [
                 {
-                    "name": "Cetirizine",
-                    "dosage": "10mg",
+                    "name": "Azithromycin",
+                    "dosage": "500mg",
                     "frequency": "Once daily",
+                    "duration": "5 days"
+                },
+                {
+                    "name": "Paracetamol",
+                    "dosage": "650mg",
+                    "frequency": "Every 6 hours if needed",
+                    "duration": "7 days"
+                },
+                {
+                    "name": "Cough Syrup",
+                    "dosage": "10ml",
+                    "frequency": "Three times daily",
+                    "duration": "7 days"
+                }
+            ],
+            "notes": "Rest and stay hydrated. Avoid cold drinks. Complete the antibiotic course even if symptoms improve. Return if fever persists beyond 3 days.",
+            "created_at": datetime.utcnow() - timedelta(days=75)
+        },
+        {
+            "patient_id": patient_id,
+            "doctor_id": doctor_id,
+            "appointment_id": None,
+            "diagnosis": "Gastroesophageal Reflux Disease (GERD)",
+            "medications": [
+                {
+                    "name": "Pantoprazole",
+                    "dosage": "40mg",
+                    "frequency": "Once daily before breakfast",
                     "duration": "30 days"
                 },
                 {
-                    "name": "Fluticasone Nasal Spray",
-                    "dosage": "50mcg",
-                    "frequency": "Twice daily",
-                    "duration": "30 days"
+                    "name": "Domperidone",
+                    "dosage": "10mg",
+                    "frequency": "Three times daily before meals",
+                    "duration": "15 days"
                 }
             ],
-            "notes": "Avoid known allergens. Use medications as prescribed. Follow up if symptoms persist after 2 weeks.",
-            "created_at": datetime.utcnow() - timedelta(days=20)
+            "notes": "Avoid spicy and oily foods. Eat smaller, frequent meals. Don't lie down immediately after eating. Elevate head while sleeping.",
+            "created_at": datetime.utcnow() - timedelta(days=55)
         },
         {
             "patient_id": patient_id,
@@ -166,8 +194,30 @@ async def seed_emr_data():
                     "duration": "90 days"
                 }
             ],
-            "notes": "Monitor blood pressure daily. Reduce salt intake. Regular exercise recommended. Follow up in 3 months.",
+            "notes": "Monitor blood pressure daily. Reduce salt intake. Regular exercise recommended. Follow up in 3 months for BP review.",
             "created_at": datetime.utcnow() - timedelta(days=45)
+        },
+        {
+            "patient_id": patient_id,
+            "doctor_id": doctor_id,
+            "appointment_id": None,
+            "diagnosis": "Seasonal Allergies",
+            "medications": [
+                {
+                    "name": "Cetirizine",
+                    "dosage": "10mg",
+                    "frequency": "Once daily at bedtime",
+                    "duration": "30 days"
+                },
+                {
+                    "name": "Fluticasone Nasal Spray",
+                    "dosage": "50mcg",
+                    "frequency": "Two sprays each nostril twice daily",
+                    "duration": "30 days"
+                }
+            ],
+            "notes": "Avoid known allergens. Keep windows closed during high pollen season. Use air purifier if possible. Follow up if symptoms don't improve.",
+            "created_at": datetime.utcnow() - timedelta(days=20)
         },
         {
             "patient_id": patient_id,
@@ -188,8 +238,30 @@ async def seed_emr_data():
                     "duration": "60 days"
                 }
             ],
-            "notes": "Take supplements with meals for better absorption. Increase sun exposure (15-20 minutes daily). Recheck vitamin D levels after 2 months.",
+            "notes": "Take supplements with meals for better absorption. Increase sun exposure 15-20 min daily. Include Vitamin D rich foods. Recheck levels after 2 months.",
             "created_at": datetime.utcnow() - timedelta(days=10)
+        },
+        {
+            "patient_id": patient_id,
+            "doctor_id": doctor_id,
+            "appointment_id": None,
+            "diagnosis": "Anxiety Management",
+            "medications": [
+                {
+                    "name": "Alprazolam",
+                    "dosage": "0.25mg",
+                    "frequency": "As needed, max twice daily",
+                    "duration": "30 days"
+                },
+                {
+                    "name": "Propranolol",
+                    "dosage": "10mg",
+                    "frequency": "Once daily",
+                    "duration": "30 days"
+                }
+            ],
+            "notes": "Practice relaxation techniques daily. Regular sleep schedule important. Avoid caffeine after 2 PM. Consider counseling therapy. Follow up in 4 weeks.",
+            "created_at": datetime.utcnow() - timedelta(days=3)
         },
     ]
     

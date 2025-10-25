@@ -194,6 +194,12 @@ export default function PatientAppointmentsScreen() {
                       <Text style={styles.paymentStatusText}>Payment Completed</Text>
                     </View>
                   )}
+
+                  {/* View Details Indicator */}
+                  <View style={styles.viewDetailsContainer}>
+                    <Text style={styles.viewDetailsText}>Tap to view details</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#2563eb" />
+                  </View>
                 </LinearGradient>
               </TouchableOpacity>
             );

@@ -111,23 +111,29 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Payment endpoints (/api/payments/create-order and /api/payments/verify) are implemented. Razorpay integration is working. Need to test the complete payment flow with appointment booking."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Complete payment flow working perfectly. Successfully tested: 1) POST /api/payments/create-order - creates Razorpay orders correctly with proper order_id, amount, currency, and razorpay_key_id. 2) POST /api/payments/verify - verifies mock payments with proper HMAC signature validation. 3) Payment verification triggers Zoom meeting creation for video appointments (though Zoom API has authentication issues, payment flow completes successfully). 4) Payment status updates correctly to 'completed' after verification. All payment APIs returning correct status codes and data structures."
   
   - task: "Get single appointment details API"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Endpoint /api/appointments/{appointment_id} should exist. Need to test if it returns complete appointment details including doctor info and zoom links."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/appointments/{appointment_id} working perfectly. Returns complete appointment data including: appointment details (id, datetime, type, status, symptoms, notes), doctor_details (first_name, last_name, specialization), patient_details, payment information (payment_status, payment_id, consultation_fee), and zoom meeting details (zoom_meeting_id, zoom_join_url, zoom_password) when applicable. All required fields present and properly serialized."
 
   - task: "List user appointments API"
     implemented: true
@@ -135,11 +141,14 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Endpoint /api/appointments/my is implemented and returns user's appointments. Need to verify it includes all necessary fields."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/appointments/my working correctly. Returns user's appointments with all necessary fields: appointment details, doctor_details with names and specialization, payment_status, zoom meeting information, and proper datetime formatting. Supports both patient and doctor role access with appropriate filtering."
 
 frontend:
   - task: "Fix payment button loading state"

@@ -107,7 +107,7 @@ export default function BookAppointmentScreen() {
 
     setLoading(true);
     try {
-      // Step 1: Book the appointment
+      // Book the appointment
       const bookingResponse = await api.post('/api/appointments/book', {
         doctor_id: selectedDoctor.id,
         appointment_date: selectedDate,
@@ -116,45 +116,24 @@ export default function BookAppointmentScreen() {
         symptoms,
       });
 
-      const appointmentId = bookingResponse.data.id;
-      setAppointmentId(appointmentId);
-
-      // Step 2: Create payment order
-      const paymentOrderResponse = await api.post('/api/payments/create-order', {
-        appointment_id: appointmentId,
-        amount: selectedDoctor.consultation_fee,
-      });
-
-      const { order_id, amount, razorpay_key_id } = paymentOrderResponse.data;
-
-      // Step 3: Simulate payment (in production, use actual Razorpay SDK)
-      // For now, we'll auto-complete the payment
-      // Mock payment success
-      const mockPaymentId = 'pay_' + Date.now();
-      const mockSignature = 'sig_' + Date.now();
-
-      // Add small delay to simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Verify payment
-      const verifyResponse = await api.post('/api/payments/verify', {
-        appointment_id: appointmentId,
-        razorpay_order_id: order_id,
-        razorpay_payment_id: mockPaymentId,
-        razorpay_signature: mockSignature,
-      });
-
-      // Get appointment details
-      const appointmentResponse = await api.get(`/api/appointments/${appointmentId}`);
-      setAppointmentDetails(appointmentResponse.data);
+      const createdAppointmentId = bookingResponse.data.id;
+      setAppointmentId(createdAppointmentId);
       
       setLoading(false);
-      setShowConfirmation(true);
+      // Navigate to dummy payment screen
+      router.push({
+        pathname: '/(patient)/payment-confirm',
+        params: {
+          appointmentId: createdAppointmentId,
+          amount: selectedDoctor.consultation_fee,
+          doctorName: `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}`,
+        },
+      });
 
     } catch (error: any) {
       setLoading(false);
-      console.error('Payment error:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to process booking. Please try again.');
+      console.error('Booking error:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to create appointment. Please try again.');
     }
   };
 

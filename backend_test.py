@@ -170,7 +170,14 @@ class NAVHIMAPITester:
                             f"Retrieved {len(doctors)} doctors for {spec}",
                             {"specialization": spec, "doctor_count": len(doctors)}
                         )
-                        return doctors[0] if doctors else None
+                        
+                        # If no doctors found, create a test doctor
+                        if not doctors:
+                            doctor = self.create_test_doctor()
+                            if doctor:
+                                return doctor
+                        else:
+                            return doctors[0]
                     else:
                         self.log_result(
                             "Get Doctors by Specialization",
@@ -187,6 +194,98 @@ class NAVHIMAPITester:
                 )
         except Exception as e:
             self.log_result("Doctor Listing", False, f"Error: {str(e)}")
+        
+        return None
+    
+    def create_test_doctor(self):
+        """Create a test doctor for testing purposes"""
+        print("Creating test doctor...")
+        
+        # Register doctor user
+        doctor_register_data = {
+            "email": "doctor@test.com",
+            "password": "Doctor@123",
+            "first_name": "John",
+            "last_name": "Smith",
+            "phone": "+1234567891",
+            "date_of_birth": "1980-01-01",
+            "gender": "male",
+            "role": "doctor"
+        }
+        
+        try:
+            response = self.make_request("POST", "/auth/register", doctor_register_data)
+            
+            if response.status_code == 201:
+                doctor_data = response.json()
+                doctor_token = doctor_data.get("access_token")
+                doctor_user_id = doctor_data.get("user", {}).get("id")
+                
+                # Update doctor profile
+                doctor_profile_data = {
+                    "specialization": "General Physician",
+                    "qualifications": ["MBBS", "MD"],
+                    "experience": 5,
+                    "consultation_fee": 500.0,
+                    "bio": "Experienced general physician",
+                    "verified": True
+                }
+                
+                # Temporarily switch to doctor token
+                original_token = self.access_token
+                self.access_token = doctor_token
+                
+                profile_response = self.make_request("PUT", "/doctors/profile", doctor_profile_data)
+                
+                # Switch back to patient token
+                self.access_token = original_token
+                
+                if profile_response.status_code == 200:
+                    # Get the doctor's ID from the doctors collection
+                    doctors_response = self.make_request("GET", "/doctors/list?specialization=General Physician")
+                    if doctors_response.status_code == 200:
+                        doctors_data = doctors_response.json()
+                        doctors = doctors_data.get("doctors", [])
+                        if doctors:
+                            self.log_result(
+                                "Create Test Doctor",
+                                True,
+                                f"Successfully created test doctor: Dr. John Smith",
+                                {"doctor_id": doctors[0]["id"], "specialization": "General Physician"}
+                            )
+                            return doctors[0]
+                
+                self.log_result(
+                    "Create Test Doctor",
+                    False,
+                    "Failed to update doctor profile or retrieve doctor data"
+                )
+            else:
+                # Doctor might already exist, try to get existing doctor
+                return self.get_existing_doctor()
+                
+        except Exception as e:
+            self.log_result("Create Test Doctor", False, f"Error: {str(e)}")
+            return self.get_existing_doctor()
+    
+    def get_existing_doctor(self):
+        """Try to get an existing doctor from the system"""
+        try:
+            # Try to get all doctors
+            response = self.make_request("GET", "/doctors/list")
+            if response.status_code == 200:
+                doctors_data = response.json()
+                doctors = doctors_data.get("doctors", [])
+                if doctors:
+                    self.log_result(
+                        "Get Existing Doctor",
+                        True,
+                        f"Found existing doctor for testing",
+                        {"doctor_id": doctors[0]["id"]}
+                    )
+                    return doctors[0]
+        except Exception as e:
+            pass
         
         return None
     

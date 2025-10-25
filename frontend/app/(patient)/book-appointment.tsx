@@ -129,35 +129,32 @@ export default function BookAppointmentScreen() {
 
       // Step 3: Simulate payment (in production, use actual Razorpay SDK)
       // For now, we'll auto-complete the payment
-      setTimeout(async () => {
-        try {
-          // Mock payment success
-          const mockPaymentId = 'pay_' + Date.now();
-          const mockSignature = 'sig_' + Date.now();
+      // Mock payment success
+      const mockPaymentId = 'pay_' + Date.now();
+      const mockSignature = 'sig_' + Date.now();
 
-          // Verify payment
-          const verifyResponse = await api.post('/api/payments/verify', {
-            appointment_id: appointmentId,
-            razorpay_order_id: order_id,
-            razorpay_payment_id: mockPaymentId,
-            razorpay_signature: mockSignature,
-          });
+      // Add small delay to simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-          // Get appointment details
-          const appointmentResponse = await api.get(`/api/appointments/${appointmentId}`);
-          setAppointmentDetails(appointmentResponse.data);
-          
-          setLoading(false);
-          setShowConfirmation(true);
-        } catch (error: any) {
-          setLoading(false);
-          Alert.alert('Error', 'Payment verification failed. Please try again.');
-        }
-      }, 2000); // Simulate payment processing time
+      // Verify payment
+      const verifyResponse = await api.post('/api/payments/verify', {
+        appointment_id: appointmentId,
+        razorpay_order_id: order_id,
+        razorpay_payment_id: mockPaymentId,
+        razorpay_signature: mockSignature,
+      });
+
+      // Get appointment details
+      const appointmentResponse = await api.get(`/api/appointments/${appointmentId}`);
+      setAppointmentDetails(appointmentResponse.data);
+      
+      setLoading(false);
+      setShowConfirmation(true);
 
     } catch (error: any) {
       setLoading(false);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to process booking');
+      console.error('Payment error:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to process booking. Please try again.');
     }
   };
 

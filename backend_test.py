@@ -396,11 +396,22 @@ class NAVHIMAPITester:
     
     def test_payment_verification(self, appointment_id: str, order_id: str):
         """Test payment verification with mock data"""
+        import hmac
+        import hashlib
+        import os
         
         # Generate mock payment data
         timestamp = str(int(time.time()))
         mock_payment_id = f"pay_{timestamp}"
-        mock_signature = f"sig_{timestamp}"
+        
+        # Generate proper signature using the same method as RazorpayService
+        razorpay_key_secret = "gGXKUnuvegGDbRLdWedViH9h"  # From backend/.env
+        message = f"{order_id}|{mock_payment_id}"
+        mock_signature = hmac.new(
+            razorpay_key_secret.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()
         
         verify_data = {
             "appointment_id": appointment_id,

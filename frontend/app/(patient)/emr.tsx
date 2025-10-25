@@ -98,6 +98,11 @@ export default function PatientEMRScreen() {
                         })}
                       </Text>
                     </View>
+                    {index === 0 && (
+                      <View style={styles.latestBadge}>
+                        <Text style={styles.latestBadgeText}>Latest</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.vitalsGrid}>
                     {vital.blood_pressure_systolic && (

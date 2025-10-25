@@ -3,7 +3,8 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer
+from fastapi.security.http import HTTPAuthorizationCredentials as HTTPAuthCredentials
 import os
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

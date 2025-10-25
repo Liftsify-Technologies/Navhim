@@ -38,7 +38,17 @@ async def seed_emr_data():
         return
     
     doctor_id = str(doctor["_id"])
-    doctor_user = await db.users.find_one({"_id": doctor["user_id"]})
+    doctor_user_id = doctor.get("user_id")
+    if doctor_user_id:
+        from bson import ObjectId
+        doctor_user = await db.users.find_one({"_id": ObjectId(doctor_user_id) if isinstance(doctor_user_id, str) else doctor_user_id})
+    else:
+        doctor_user = None
+    
+    if not doctor_user:
+        print("Doctor user not found. Using default values.")
+        doctor_user = {"_id": "unknown", "first_name": "Default", "last_name": "Doctor"}
+    
     print(f"Found doctor: Dr. {doctor_user['first_name']} {doctor_user['last_name']}")
     
     # Clear existing EMR data for test user

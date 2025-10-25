@@ -127,67 +127,37 @@ export default function BookAppointmentScreen() {
 
       const { order_id, amount, razorpay_key_id } = paymentOrderResponse.data;
 
-      // Step 3: Process Razorpay payment
-      await processRazorpayPayment({
-        order_id,
-        amount,
-        key_id: razorpay_key_id,
-        appointment_id: appointmentId,
-      });
+      // Step 3: Simulate payment (in production, use actual Razorpay SDK)
+      // For now, we'll auto-complete the payment
+      setTimeout(async () => {
+        try {
+          // Mock payment success
+          const mockPaymentId = 'pay_' + Date.now();
+          const mockSignature = 'sig_' + Date.now();
+
+          // Verify payment
+          const verifyResponse = await api.post('/api/payments/verify', {
+            appointment_id: appointmentId,
+            razorpay_order_id: order_id,
+            razorpay_payment_id: mockPaymentId,
+            razorpay_signature: mockSignature,
+          });
+
+          // Get appointment details
+          const appointmentResponse = await api.get(`/api/appointments/${appointmentId}`);
+          setAppointmentDetails(appointmentResponse.data);
+          
+          setLoading(false);
+          setShowConfirmation(true);
+        } catch (error: any) {
+          setLoading(false);
+          Alert.alert('Error', 'Payment verification failed. Please try again.');
+        }
+      }, 2000); // Simulate payment processing time
 
     } catch (error: any) {
+      setLoading(false);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to process booking');
-      setLoading(false);
-    }
-  };
-
-  const processRazorpayPayment = async (paymentData: any) => {
-    try {
-      // For demo purposes, we'll simulate payment success
-      // In production, you would integrate actual Razorpay SDK
-      
-      Alert.alert(
-        'Payment',
-        'Proceed with payment of ₹' + (paymentData.amount / 100) + '?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => setLoading(false),
-          },
-          {
-            text: 'Pay Now',
-            onPress: async () => {
-              try {
-                // Simulate payment success
-                const mockPaymentId = 'pay_mock_' + Date.now();
-                const mockSignature = 'sig_mock_' + Date.now();
-
-                // Verify payment
-                const verifyResponse = await api.post('/api/payments/verify', {
-                  appointment_id: paymentData.appointment_id,
-                  razorpay_order_id: paymentData.order_id,
-                  razorpay_payment_id: mockPaymentId,
-                  razorpay_signature: mockSignature,
-                });
-
-                // Get appointment details
-                const appointmentResponse = await api.get(`/api/appointments/${paymentData.appointment_id}`);
-                setAppointmentDetails(appointmentResponse.data);
-                
-                setLoading(false);
-                setShowConfirmation(true);
-              } catch (error: any) {
-                setLoading(false);
-                Alert.alert('Error', 'Payment verification failed. Please contact support.');
-              }
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', 'Payment processing failed');
     }
   };
 

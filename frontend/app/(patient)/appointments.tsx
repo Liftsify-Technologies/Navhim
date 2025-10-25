@@ -78,6 +78,7 @@ export default function PatientAppointmentsScreen() {
                 key={appointment.id}
                 style={styles.appointmentCard}
                 activeOpacity={0.7}
+                onPress={() => router.push(`/(patient)/appointment-details?id=${appointment.id}`)}
               >
                 <LinearGradient
                   colors={isPast ? ['#f8fafc', '#f1f5f9'] : ['#fff', '#fff']}

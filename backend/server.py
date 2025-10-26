@@ -327,6 +327,38 @@ async def get_doctor_by_id(doctor_id: str):
         logger.error(f"Error fetching doctor: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch doctor")
 
+
+@api_router.get("/doctors/{doctor_id}/booked-slots")
+async def get_booked_slots(doctor_id: str, date: str):
+    """Get all booked time slots for a doctor on a specific date"""
+    try:
+        # Parse the date
+        target_date = datetime.strptime(date, "%Y-%m-%d")
+        start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Find all appointments for this doctor on this date (excluding cancelled)
+        appointments = await db.appointments.find({
+            "doctor_id": doctor_id,
+            "appointment_datetime": {
+                "$gte": start_of_day,
+                "$lte": end_of_day
+            },
+            "status": {"$in": ["scheduled", "completed"]}
+        }).to_list(length=None)
+        
+        # Extract booked times
+        booked_slots = []
+        for appointment in appointments:
+            time_str = appointment["appointment_datetime"].strftime("%H:%M")
+            booked_slots.append(time_str)
+        
+        return {"booked_slots": booked_slots}
+    except Exception as e:
+        logger.error(f"Error fetching booked slots: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch booked slots")
+
+
 @api_router.post("/appointments/book", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 async def book_appointment(appointment_data: AppointmentCreate, current_user: dict = Depends(get_current_user)):
     try:

@@ -446,25 +446,49 @@ export default function BookAppointmentScreen() {
                   )}
                 </Text>
                 <View style={styles.timeSlotsGrid}>
-                  {getAvailableTimeSlots().map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      style={[
-                        styles.timeSlot,
-                        selectedTime === time && styles.timeSlotActive,
-                      ]}
-                      onPress={() => setSelectedTime(time)}
-                    >
-                      <Text
+                  {allTimeSlots.map((time) => {
+                    const isBooked = bookedSlots.includes(time);
+                    const isPast = (() => {
+                      if (!selectedDate) return false;
+                      const today = new Date();
+                      const selected = new Date(selectedDate);
+                      if (selected.toDateString() !== today.toDateString()) return false;
+                      
+                      const [hour, minute] = time.split(':').map(Number);
+                      const currentHour = today.getHours();
+                      const currentMinute = today.getMinutes();
+                      if (hour < currentHour) return true;
+                      if (hour === currentHour && minute <= currentMinute) return true;
+                      return false;
+                    })();
+                    const isDisabled = isBooked || isPast;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={time}
                         style={[
-                          styles.timeSlotText,
-                          selectedTime === time && styles.timeSlotTextActive,
+                          styles.timeSlot,
+                          selectedTime === time && styles.timeSlotActive,
+                          isDisabled && styles.timeSlotDisabled,
                         ]}
+                        onPress={() => !isDisabled && setSelectedTime(time)}
+                        disabled={isDisabled}
                       >
-                        {time}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.timeSlotText,
+                            selectedTime === time && styles.timeSlotTextActive,
+                            isDisabled && styles.timeSlotTextDisabled,
+                          ]}
+                        >
+                          {time}
+                        </Text>
+                        {isBooked && (
+                          <Text style={styles.bookedLabel}>Booked</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
                 {getAvailableTimeSlots().length === 0 && (

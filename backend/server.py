@@ -339,6 +339,19 @@ async def book_appointment(appointment_data: AppointmentCreate, current_user: di
         
         appointment_datetime = datetime.strptime(f"{appointment_data.appointment_date} {appointment_data.appointment_time}", "%Y-%m-%d %H:%M")
         
+        # Check if slot is already booked for this doctor
+        existing_appointment = await db.appointments.find_one({
+            "doctor_id": appointment_data.doctor_id,
+            "appointment_datetime": appointment_datetime,
+            "status": {"$in": ["scheduled", "completed"]}  # Don't count cancelled appointments
+        })
+        
+        if existing_appointment:
+            raise HTTPException(
+                status_code=409, 
+                detail="This time slot is already booked. Please select a different time."
+            )
+        
         appointment = {
             "patient_id": current_user["user_id"],
             "doctor_id": appointment_data.doctor_id,

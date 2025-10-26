@@ -10,7 +10,7 @@ export default function PatientProfileScreen() {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/');
+    router.replace('/(auth)/login');
   };
 
   const menuItems = [

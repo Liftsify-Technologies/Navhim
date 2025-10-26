@@ -47,26 +47,46 @@ export default function BookAppointmentScreen() {
     const today = new Date();
     const selected = new Date(selectedDate);
     
-    // If selected date is not today, return all slots
-    if (selected.toDateString() !== today.toDateString()) {
-      return allTimeSlots;
+    let availableSlots = allTimeSlots;
+    
+    // If selected date is today, filter out past time slots
+    if (selected.toDateString() === today.toDateString()) {
+      const currentHour = today.getHours();
+      const currentMinute = today.getMinutes();
+      
+      availableSlots = allTimeSlots.filter(slot => {
+        const [hour, minute] = slot.split(':').map(Number);
+        if (hour > currentHour) return true;
+        if (hour === currentHour && minute > currentMinute) return true;
+        return false;
+      });
     }
     
-    // Filter out past time slots for today
-    const currentHour = today.getHours();
-    const currentMinute = today.getMinutes();
+    // Filter out booked slots
+    return availableSlots.filter(slot => !bookedSlots.includes(slot));
+  };
+
+  const loadBookedSlots = async () => {
+    if (!selectedDoctor || !selectedDate) return;
     
-    return allTimeSlots.filter(slot => {
-      const [hour, minute] = slot.split(':').map(Number);
-      if (hour > currentHour) return true;
-      if (hour === currentHour && minute > currentMinute) return true;
-      return false;
-    });
+    try {
+      const response = await api.get(`/api/doctors/${selectedDoctor.id}/booked-slots?date=${selectedDate}`);
+      setBookedSlots(response.data.booked_slots || []);
+    } catch (error) {
+      console.error('Error loading booked slots:', error);
+      setBookedSlots([]);
+    }
   };
 
   useEffect(() => {
     loadSpecializations();
   }, []);
+
+  useEffect(() => {
+    if (selectedDoctor && selectedDate) {
+      loadBookedSlots();
+    }
+  }, [selectedDoctor, selectedDate]);
 
   const loadSpecializations = async () => {
     try {

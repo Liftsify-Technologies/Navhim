@@ -33,6 +33,7 @@ export default function BookAppointmentScreen() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [appointmentDetails, setAppointmentDetails] = useState<any>(null);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
   const allTimeSlots = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
